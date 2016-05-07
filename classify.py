@@ -39,7 +39,7 @@ def callback(ch, method, properties, body):
     print task.__dict__
     result = classify(task.__dict__['file'])
     task.status = "finished classifing, sending to fuser"
-    task.dataClassify = result
+    task.dataClassify = str(result)
     session.commit()
     print(" [x] Done")
     ch.basic_ack(delivery_tag = method.delivery_tag)
