@@ -1,2 +1,4 @@
 pika==0.10.0
+psycopg2==2.6.1
+python-magic==0.4.11
 SQLAlchemy==1.0.12
