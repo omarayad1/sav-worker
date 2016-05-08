@@ -4,7 +4,7 @@ import time
 import os
 import json
 from sqlalchemy import *
-from sqlalchemy.orm import create_session
+from sqlalchemy.orm import create_session,sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 #Create and engine and get the metadata
@@ -21,7 +21,7 @@ class Users(Base):
 
 
 #Create a session to use the tables
-session = create_session(bind=engine)
+session = sessionmaker(bind=engine)()
 
 connection = pika.BlockingConnection(pika.ConnectionParameters(
         host='localhost'))
@@ -41,18 +41,21 @@ def callback(ch, method, properties, body):
     task = session.query(Tasks).filter_by(id=int(body)).first()
     task.status = "Validating file"
     session.commit()
+    task = session.query(Tasks).filter_by(id=int(body)).first()
     filename = json.loads(task.__dict__['file'])[0]
     filetype = magic.from_file(filename, mime=True)
-    if filetype[0:5] == 'image':
+    if task.type == 'image':
         task.dataKeyFrames = [0]
         task.status = "confrimed image file, sending to classifier"
         session.commit()
         channel_classify.basic_publish(exchange='', routing_key="classify", body=body)
+        task = session.query(Tasks).filter_by(id=int(body)).first()
         task.status = "sent to classifier"
         session.commit()
     else:
         task.status = "confrimed video file, sending to extractor"
         session.commit()
+        task = session.query(Tasks).filter_by(id=int(body)).first()
         channel_extract.basic_publish(exchange='', routing_key="extract", body=body)
         task.status = "sent to extractor"
         session.commit()
