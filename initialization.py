@@ -45,7 +45,7 @@ def callback(ch, method, properties, body):
     task.status = "Validating file"
     session.commit()
     task = session.query(Tasks).filter_by(id=int(body)).first()
-    filename = json.loads(task.__dict__['file'])[0]
+    filename = json.loads(task.file)[0]
     filetype = magic.from_file(filename, mime=True)
     if task.type == 'image':
         task.dataKeyFrames = [0]

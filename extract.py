@@ -57,13 +57,16 @@ def extractKF(filename, userId, taskId):
             line = line.replace(word, "")
         out.append(line)
     old_time_list = [word.strip() for word in out]
+    time_list = []
+    for item in old_time_list:
+        time_list.append(time.strftime('%H:%M:%S', time.gmtime(float(item))))
     with open(indicesFile) as f:
         indices_list = f.readlines()
         print f.readlines()
     indices_list = [indices_list.rstrip('\n') for indices_list in open(indicesFile)]
     os.remove(indicesFile)
     os.remove(timeFile)
-    return indices_list
+    return time_list, indices_list
 
 def callback(ch, method, properties, body):
     print(" [x] Received %r" % body)
@@ -71,12 +74,12 @@ def callback(ch, method, properties, body):
     task.status = "recieved by extractor, running extractor"
     session.commit()
     task = session.query(Tasks).filter_by(id=int(body)).first()
-    result = extractKF(json.loads(task.__dict__['file'])[0],str(task.userId),str(task.id))
+    timelist, result = extractKF(json.loads(task.file)[0],str(task.userId),str(task.id))
     filelist = [os.path.abspath(x) for x in glob.glob("user_data/"+str(task.userId)+'/'+str(task.id)+'/*.JPEG')]
-    task.file = str(filelist)
-    print filelist
+    task.file = json.dumps(filelist)
     task.status = "finished extracting, sending to classifier"
-    task.dataKeyFrames = str(result)
+    task.dataKeyFrames = json.dumps(result)
+    task.timeList = json.dumps(timelist)
     session.commit()
     channel_classify.basic_publish(exchange='', routing_key="classify", body=body)
     task = session.query(Tasks).filter_by(id=int(body)).first()
