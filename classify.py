@@ -85,7 +85,7 @@ def callback(ch, method, properties, body):
     if task.type == 'image':
         result = classifyImage(json.loads(task.__dict__['file'])[0])
     else:
-
+        pass
     task.status = "finished classifing, sending to fuser"
     task.dataClassify = str(result)
     session.commit()

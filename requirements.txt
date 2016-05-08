@@ -6,6 +6,7 @@ networkx==1.11
 numpy==1.11.0
 pika==0.10.0
 Pillow==3.2.0
+protobuf==2.6.1
 psycopg2==2.6.1
 pyparsing==2.1.1
 python-dateutil==2.5.3

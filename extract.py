@@ -1,6 +1,9 @@
 import pika
+import glob
 import time
+import json
 import os
+import subprocess
 from sqlalchemy import *
 from sqlalchemy.orm import create_session,sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
@@ -23,27 +26,66 @@ session = sessionmaker(bind=engine)()
 connection = pika.BlockingConnection(pika.ConnectionParameters(
         host='localhost'))
 channel = connection.channel()
+channel_classify = connection.channel()
 
-channel.queue_declare(queue='classify', durable=True)
+channel.queue_declare(queue='extract', durable=True)
+channel_classify.queue_declare(queue='classify', durable=True)
+
 print(' [*] Waiting for messages. To exit press CTRL+C')
 
-def extractKf(filenames):
-    return ["file1.jpg", "file2.jpg", "file3.jpg"]
+def extractKF(filename, userId, taskId):
+    ffmpeg = '/usr/bin/ffmpeg'
+    ffprobe = '/usr/bin/ffprobe'
+    base_url = "user_data/"+userId+"/"+taskId+'/'
+    outFile = base_url+'%07d.JPEG'
+    timeFile = base_url+'time.txt'
+    indicesFile  = base_url+'frame_indices.txt'
+    cmd1 = [ffmpeg ,'-i', filename,'-vf',"select=gt(scene\,0.5)",'-vsync','vfr',outFile]
+    subprocess.call(cmd1)
+    cmd = [ffprobe ,' -show_frames -f lavfi "movie=',filename,',select=gt(scene\,.5)" | grep "pkt_pts_time=" >> ' ,timeFile]
+    cmd2 = ' '.join(cmd)
+    os.system(cmd2)
+    cmd3 = [ffprobe ,' -show_frames -f lavfi "movie=',filename,',select=gt(scene\,.5)" | grep -n I| cut -d : -f 1 > ',indicesFile]
+    cmd4 = ' '.join(cmd3)
+    os.system(cmd4)
+    infile = base_url+"time.txt"
+    delete_list = ["pkt_pts_time="]
+    fin = open(infile)
+    out = []
+    for line in fin:
+        for word in delete_list:
+            line = line.replace(word, "")
+        out.append(line)
+    old_time_list = [word.strip() for word in out]
+    with open(indicesFile) as f:
+        indices_list = f.readlines()
+        print f.readlines()
+    indices_list = [indices_list.rstrip('\n') for indices_list in open(indicesFile)]
+    os.remove(indicesFile)
+    os.remove(timeFile)
+    return indices_list
 
 def callback(ch, method, properties, body):
     print(" [x] Received %r" % body)
     task = session.query(Tasks).filter_by(id=int(body)).first()
-    task.status = "recieved by classifier, running classifier"
+    task.status = "recieved by extractor, running extractor"
     session.commit()
     task = session.query(Tasks).filter_by(id=int(body)).first()
-    result = extractKf(task.__dict__['file'])
-    task.status = "finished classifing, sending to fuser"
-    task.dataClassify = str(result)
+    result = extractKF(json.loads(task.__dict__['file'])[0],str(task.userId),str(task.id))
+    filelist = [os.path.abspath(x) for x in glob.glob("user_data/"+str(task.userId)+'/'+str(task.id)+'/*.JPEG')]
+    task.file = str(filelist)
+    print filelist
+    task.status = "finished extracting, sending to classifier"
+    task.dataKeyFrames = str(result)
+    session.commit()
+    channel_classify.basic_publish(exchange='', routing_key="classify", body=body)
+    task = session.query(Tasks).filter_by(id=int(body)).first()
+    task.status = "sent to classifier"
     session.commit()
     print(" [x] Done")
     ch.basic_ack(delivery_tag = method.delivery_tag)
 
 channel.basic_qos(prefetch_count=1)
-channel.basic_consume(callback, queue='classify')
+channel.basic_consume(callback, queue='extract')
 
 channel.start_consuming()
