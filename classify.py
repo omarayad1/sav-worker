@@ -181,6 +181,7 @@ def callback(ch, method, properties, body):
         session.commit()
     else:
         keyframes = sorted(map(int,json.loads(task.dataKeyFrames)))
+        print keyframes
         time_list = sorted(json.loads(task.timeList))
         files = sorted(json.loads(task.file))
         result_temp = classifyVideo(files, time_list,map(str,keyframes))

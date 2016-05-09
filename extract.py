@@ -81,7 +81,7 @@ def callback(ch, method, properties, body):
         filelist.append(os.path.abspath('../sav-app/assets/user_data/'+str(task.userId)+'/'+str(task.id)+'/'+imagefile.split('/')[-1]))
     task.file = json.dumps(sorted(filelist))
     task.status = "finished extracting, sending to classifier"
-    task.dataKeyFrames = json.dumps(sorted(result))
+    task.dataKeyFrames = json.dumps(sorted(map(int,result)))
     task.timeList = json.dumps(sorted(timelist))
     session.commit()
     channel_classify.basic_publish(exchange='', routing_key="classify", body=body)
