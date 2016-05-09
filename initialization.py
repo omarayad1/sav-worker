@@ -41,7 +41,14 @@ def callback(ch, method, properties, body):
     task = session.query(Tasks).filter_by(id=int(body)).first()
     if not os.path.exists("user_data/"+str(task.userId)):
         os.makedirs("user_data/"+str(task.userId))
+    if not os.path.exists("../sav-app/assets/user_data"):
+        os.makedirs("../sav-app/assets/user_data")
+    if not os.path.exists("user_data"):
+        os.makedirs("user_data")
+    if not os.path.exists("../sav-app/assets/user_data/"+str(task.userId)):
+        os.makedirs("../sav-app/assets/user_data/"+str(task.userId))
     os.makedirs("user_data/"+str(task.userId)+'/'+body)
+    os.makedirs("../sav-app/assets/user_data/"+str(task.userId)+'/'+body)
     task.status = "Validating file"
     session.commit()
     task = session.query(Tasks).filter_by(id=int(body)).first()

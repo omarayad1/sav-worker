@@ -176,6 +176,9 @@ def callback(ch, method, properties, body):
     task = session.query(Tasks).filter_by(id=int(body)).first()
     if task.type == 'image':
         result = {0:classifyImage(json.loads(task.file)[0])}
+        os.rename(json.loads(task.file)[0], os.path.abspath('../sav-app/assets/user_data/'+str(task.userId)+'/'+str(task.id)+'/'+json.loads(task.file)[0].split('/')[-1]))
+        task.file = json.dumps([os.path.abspath('../sav-app/assets/user_data/'+str(task.userId)+'/'+str(task.id)+'/'+json.loads(task.file)[0].split('/')[-1])])
+        session.commit()
     else:
         keyframes = sorted(json.loads(task.dataKeyFrames))
         time_list = sorted(json.loads(task.timeList))

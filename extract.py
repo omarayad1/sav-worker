@@ -75,11 +75,14 @@ def callback(ch, method, properties, body):
     session.commit()
     task = session.query(Tasks).filter_by(id=int(body)).first()
     timelist, result = extractKF(json.loads(task.file)[0],str(task.userId),str(task.id))
-    filelist = [os.path.abspath(x) for x in glob.glob("user_data/"+str(task.userId)+'/'+str(task.id)+'/*.JPEG')]
-    task.file = json.dumps(filelist)
+    filelist = []
+    for imagefile in glob.glob("user_data/"+str(task.userId)+'/'+str(task.id)+'/*.JPEG'):
+        os.rename(os.path.abspath(imagefile), os.path.abspath('../sav-app/assets/user_data/'+str(task.userId)+'/'+str(task.id)+'/'+imagefile.split('/')[-1]))
+        filelist.append(os.path.abspath('../sav-app/assets/user_data/'+str(task.userId)+'/'+str(task.id)+'/'+imagefile.split('/')[-1]))
+    task.file = json.dumps(sorted(filelist))
     task.status = "finished extracting, sending to classifier"
-    task.dataKeyFrames = json.dumps(result)
-    task.timeList = json.dumps(timelist)
+    task.dataKeyFrames = json.dumps(sorted(result))
+    task.timeList = json.dumps(sorted(timelist))
     session.commit()
     channel_classify.basic_publish(exchange='', routing_key="classify", body=body)
     task = session.query(Tasks).filter_by(id=int(body)).first()
