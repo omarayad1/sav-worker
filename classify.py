@@ -180,10 +180,10 @@ def callback(ch, method, properties, body):
         task.file = json.dumps([os.path.abspath('../sav-app/assets/user_data/'+str(task.userId)+'/'+str(task.id)+'/'+json.loads(task.file)[0].split('/')[-1])])
         session.commit()
     else:
-        keyframes = sorted(json.loads(task.dataKeyFrames))
+        keyframes = sorted(map(int,json.loads(task.dataKeyFrames)))
         time_list = sorted(json.loads(task.timeList))
         files = sorted(json.loads(task.file))
-        result_temp = classifyVideo(files, time_list,keyframes)
+        result_temp = classifyVideo(files, time_list,map(str,keyframes))
         result = {}
         for key, value in result_temp.iteritems():
             for frame in value:
